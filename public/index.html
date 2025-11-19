@@ -7,27 +7,303 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; }
+        button { font-family: inherit; }
+        input { font-family: inherit; }
     </style>
 </head>
 <body>
     <div id="root"></div>
+    
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
     <script>
-        // Complete React app will go here - I'll provide it in next step
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(React.createElement('div', {
-            style: {
-                minHeight: '100vh',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'linear-gradient(135deg, #1e3a8a, #991b1b)',
-                color: 'white',
-                fontSize: '32px',
-                fontWeight: 'bold'
+        const { useState, useEffect, createElement: h } = React;
+        
+        const questions = [
+          { section: "Basic Eligibility", id: 1, question: "What is your age?", options: [{ text: "18 or over", points: 5 }, { text: "Under 18", points: 0 }] },
+          { section: "Basic Eligibility", id: 2, question: "Which field best describes your expertise?", options: [{ text: "Digital Technology", points: 5 }, { text: "Academia/Research", points: 5 }, { text: "Arts and Culture", points: 5 }, { text: "Engineering", points: 5 }, { text: "None of the above", points: 0 }] },
+          { section: "Experience Level", id: 3, question: "How many years of professional experience do you have in your field?", options: [{ text: "Less than 2 years", points: 3 }, { text: "2-5 years", points: 6 }, { text: "5-10 years", points: 10 }, { text: "10+ years", points: 12 }] },
+          { section: "Experience Level", id: 4, question: "Which category do you believe you fit into?", options: [{ text: "Exceptional Promise", points: 5 }, { text: "Exceptional Talent", points: 10 }, { text: "Not sure", points: 3 }] },
+          { section: "Experience Level", id: 5, question: "Have you won any prestigious awards or prizes in your field?", options: [{ text: "Yes, internationally recognized", points: 15 }, { text: "Yes, nationally recognized", points: 10 }, { text: "Yes, industry level", points: 5 }, { text: "No", points: 0 }] },
+          { section: "Professional Achievements", id: 6, question: "Have you founded or held a senior executive position at a product-led digital technology company?", options: [{ text: "Yes, as founder", points: 15 }, { text: "Yes, as senior executive", points: 12 }, { text: "Yes, mid-level leadership", points: 8 }, { text: "No", points: 0 }] },
+          { section: "Professional Achievements", id: 7, question: "Have you worked on innovative projects in new digital technology fields?", options: [{ text: "Led multiple breakthrough projects", points: 12 }, { text: "Led one significant project", points: 8 }, { text: "Contributed as key team member", points: 5 }, { text: "No", points: 0 }] },
+          { section: "Professional Achievements", id: 8, question: "Do you have publications, patents, or research endorsed by experts?", options: [{ text: "Multiple publications/patents", points: 12 }, { text: "Some publications", points: 7 }, { text: "Working on it", points: 3 }, { text: "No", points: 0 }] },
+          { section: "Professional Achievements", id: 9, question: "Have you contributed to your sector outside of work?", options: [{ text: "Regularly with impact", points: 10 }, { text: "Occasionally", points: 6 }, { text: "Starting to engage", points: 3 }, { text: "No", points: 0 }] },
+          { section: "Recognition and Impact", id: 10, question: "Have you received recognition as a leading or emerging talent in the last 5 years?", options: [{ text: "From multiple sources", points: 15 }, { text: "From one source", points: 10 }, { text: "Some informal recognition", points: 5 }, { text: "No", points: 0 }] },
+          { section: "Recognition and Impact", id: 11, question: "Do you have letters of recommendation from recognized experts?", options: [{ text: "From 3+ experts", points: 12 }, { text: "From 2-3 professionals", points: 8 }, { text: "From 1 person", points: 4 }, { text: "Can obtain them", points: 2 }, { text: "No", points: 0 }] },
+          { section: "Recognition and Impact", id: 12, question: "Have you made significant contributions to the digital technology sector?", options: [{ text: "With measurable impact", points: 15 }, { text: "With some impact", points: 10 }, { text: "Impact hard to quantify", points: 5 }, { text: "No", points: 0 }] },
+          { section: "Recognition and Impact", id: 13, question: "Do you have evidence of media coverage or conference speaking?", options: [{ text: "Major publications/conferences", points: 10 }, { text: "Industry-specific media", points: 7 }, { text: "Limited coverage", points: 3 }, { text: "No", points: 0 }] },
+          { section: "Documentation Readiness", id: 14, question: "How organized is your professional documentation?", options: [{ text: "Very organized", points: 8 }, { text: "Somewhat organized", points: 5 }, { text: "Minimal documentation", points: 2 }, { text: "Not organized", points: 0 }] },
+          { section: "Documentation Readiness", id: 15, question: "Are you currently in the UK or planning to apply from outside?", options: [{ text: "In UK, ready to switch", points: 5 }, { text: "Outside UK, ready to apply", points: 5 }, { text: "Still planning", points: 3 }] }
+        ];
+        
+        function App() {
+          const [stage, setStage] = useState('landing');
+          const [name, setName] = useState('');
+          const [email, setEmail] = useState('');
+          const [currentQ, setCurrentQ] = useState(0);
+          const [answers, setAnswers] = useState({});
+          const [selected, setSelected] = useState({});
+          const [loading, setLoading] = useState(false);
+          
+          useEffect(() => {
+            const params = new URLSearchParams(window.location.search);
+            const sessionId = params.get('session_id');
+            if (sessionId && stage === 'landing') {
+              verifyPayment(sessionId);
             }
-        }, 'Loading UK Visa Assessment...'));
+          }, []);
+          
+          const verifyPayment = async (sessionId) => {
+            setLoading(true);
+            try {
+              const res = await fetch('/api/verify-payment?session_id=' + sessionId);
+              const data = await res.json();
+              if (data.verified) {
+                setName(data.customerName);
+                setEmail(data.customerEmail);
+                setStage('assessment');
+                window.history.replaceState({}, '', '/');
+              } else {
+                alert('Payment verification failed');
+              }
+            } catch (e) {
+              alert('Error verifying payment');
+            }
+            setLoading(false);
+          };
+          
+          const handlePayment = async () => {
+            setLoading(true);
+            try {
+              const res = await fetch('/api/create-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email })
+              });
+              const data = await res.json();
+              if (data.url) window.location.href = data.url;
+              else alert('Error creating payment');
+            } catch (e) {
+              alert('Error processing payment');
+            }
+            setLoading(false);
+          };
+          
+          const handleAnswer = (qId, pts, idx) => {
+            if (selected[qId] === undefined) {
+              setAnswers({...answers, [qId]: pts});
+              setSelected({...selected, [qId]: idx});
+            }
+          };
+          
+          const next = () => {
+            if (currentQ < 14) setCurrentQ(currentQ + 1);
+            else setStage('results');
+          };
+          
+          const calcScore = () => {
+            const total = Object.values(answers).reduce((s,p) => s+p, 0);
+            return Math.round((total/150)*100);
+          };
+          
+          if (loading) {
+            return h('div', {style: {minHeight:'100vh', background:'linear-gradient(135deg,#1e3a8a,#991b1b)', display:'flex', alignItems:'center', justifyContent:'center', color:'white', fontSize:'24px'}}, 'Processing...');
+          }
+          
+          if (stage === 'landing') {
+            return h('div', {style: {minHeight:'100vh', background:'linear-gradient(135deg,#1e3a8a,#991b1b)', padding:'40px 20px'}},
+              h('div', {style: {maxWidth:'800px', margin:'0 auto', background:'white', borderRadius:'20px', padding:'60px 40px'}},
+                h('div', {style: {textAlign:'center'}},
+                  h('div', {style: {fontSize:'80px', marginBottom:'20px'}}, '🇬🇧'),
+                  h('h1', {style: {fontSize:'48px', fontWeight:'bold', marginBottom:'20px'}}, 'UK Global Talent Visa'),
+                  h('p', {style: {fontSize:'24px', color:'#6b7280', marginBottom:'10px'}}, 'Eligibility Assessment'),
+                  h('p', {style: {fontSize:'18px', color:'#9ca3af'}}, 'Discover your chances in 15 questions')
+                ),
+                h('div', {style: {marginTop:'40px'}},
+                  h('div', {style: {background:'linear-gradient(135deg,#dbeafe,#fecaca)', padding:'30px', borderRadius:'15px', marginBottom:'40px', border:'2px solid #3b82f6'}},
+                    h('div', {style: {display:'flex', justifyContent:'space-between', alignItems:'center'}},
+                      h('div', null,
+                        h('h3', {style: {fontSize:'28px', fontWeight:'bold'}}, 'Assessment Fee'),
+                        h('p', {style: {color:'#6b7280'}}, 'One-time payment')
+                      ),
+                      h('div', {style: {fontSize:'48px', fontWeight:'bold', color:'#1e3a8a'}}, '£5')
+                    )
+                  ),
+                  h('button', {
+                    onClick: () => setStage('contact'),
+                    style: {width:'100%', padding:'18px', background:'linear-gradient(to right,#2563eb,#9333ea,#dc2626)', color:'white', border:'none', borderRadius:'12px', fontSize:'20px', fontWeight:'bold', cursor:'pointer'}
+                  }, 'Start Your Assessment →'),
+                  h('div', {style: {textAlign:'center', marginTop:'30px', paddingTop:'20px', borderTop:'1px solid #e5e7eb'}},
+                    h('a', {href:'https://horizonbloomconsulting.com', target:'_blank', style: {color:'#6b7280', fontSize:'12px', textDecoration:'none'}}, 
+                      'Powered by ',
+                      h('span', {style: {color:'#2563eb', fontWeight:'600'}}, 'Horizonbloomconsulting.com')
+                    )
+                  )
+                )
+              )
+            );
+          }
+          
+          if (stage === 'contact') {
+            const valid = name.trim() && email.includes('@');
+            return h('div', {style: {minHeight:'100vh', background:'linear-gradient(135deg,#1e3a8a,#991b1b)', padding:'40px 20px'}},
+              h('div', {style: {maxWidth:'600px', margin:'0 auto', background:'white', borderRadius:'20px', padding:'40px'}},
+                h('div', {style: {textAlign:'center', marginBottom:'30px'}},
+                  h('div', {style: {fontSize:'60px', marginBottom:'15px'}}, '📋'),
+                  h('h1', {style: {fontSize:'36px', fontWeight:'bold', marginBottom:'10px'}}, 'Your Information'),
+                  h('p', {style: {color:'#6b7280'}}, 'Required for payment')
+                ),
+                h('div', {style: {marginBottom:'25px'}},
+                  h('label', {style: {display:'block', fontSize:'14px', fontWeight:'bold', color:'#374151', marginBottom:'8px'}}, 'Full Name *'),
+                  h('input', {
+                    type:'text',
+                    value:name,
+                    onChange: e => setName(e.target.value),
+                    placeholder:'Enter your full name',
+                    style: {width:'100%', padding:'12px 16px', border:'2px solid #d1d5db', borderRadius:'12px', fontSize:'16px'}
+                  })
+                ),
+                h('div', {style: {marginBottom:'25px'}},
+                  h('label', {style: {display:'block', fontSize:'14px', fontWeight:'bold', color:'#374151', marginBottom:'8px'}}, 'Email Address *'),
+                  h('input', {
+                    type:'email',
+                    value:email,
+                    onChange: e => setEmail(e.target.value),
+                    placeholder:'your.email@example.com',
+                    style: {width:'100%', padding:'12px 16px', border:'2px solid #d1d5db', borderRadius:'12px', fontSize:'16px'}
+                  })
+                ),
+                h('div', {style: {display:'flex', gap:'12px'}},
+                  h('button', {onClick: () => setStage('landing'), style: {flex:1, padding:'12px', background:'#f3f4f6', color:'#374151', border:'none', borderRadius:'12px', fontSize:'16px', fontWeight:'bold', cursor:'pointer'}}, 'Back'),
+                  h('button', {onClick: () => valid && setStage('payment'), disabled: !valid, style: {flex:1, padding:'12px', background: valid ? 'linear-gradient(to right,#2563eb,#9333ea,#dc2626)' : '#e5e7eb', color: valid ? 'white' : '#9ca3af', border:'none', borderRadius:'12px', fontSize:'16px', fontWeight:'bold', cursor: valid ? 'pointer' : 'not-allowed'}}, 'Continue →')
+                ),
+                h('div', {style: {textAlign:'center', marginTop:'30px', paddingTop:'20px', borderTop:'1px solid #e5e7eb'}},
+                  h('a', {href:'https://horizonbloomconsulting.com', target:'_blank', style: {color:'#6b7280', fontSize:'12px', textDecoration:'none'}}, 
+                    'Powered by ',
+                    h('span', {style: {color:'#2563eb', fontWeight:'600'}}, 'Horizonbloomconsulting.com')
+                  )
+                )
+              )
+            );
+          }
+          
+          if (stage === 'payment') {
+            return h('div', {style: {minHeight:'100vh', background:'linear-gradient(135deg,#1e3a8a,#991b1b)', padding:'40px 20px'}},
+              h('div', {style: {maxWidth:'600px', margin:'0 auto', background:'white', borderRadius:'20px', padding:'40px'}},
+                h('div', {style: {textAlign:'center', marginBottom:'30px'}},
+                  h('div', {style: {fontSize:'60px', marginBottom:'15px'}}, '💳'),
+                  h('h1', {style: {fontSize:'36px', fontWeight:'bold', marginBottom:'10px'}}, 'Secure Payment'),
+                  h('p', {style: {color:'#6b7280'}}, 'Complete payment to unlock assessment')
+                ),
+                h('div', {style: {background:'linear-gradient(135deg,#dbeafe,#e9d5ff)', padding:'24px', borderRadius:'15px', marginBottom:'30px', border:'2px solid #3b82f6'}},
+                  h('div', {style: {display:'flex', justifyContent:'space-between'}},
+                    h('div', null,
+                      h('h3', {style: {fontSize:'18px', fontWeight:'bold', marginBottom:'5px'}}, 'Assessment for:'),
+                      h('p', null, name),
+                      h('p', {style: {fontSize:'14px', color:'#6b7280'}}, email)
+                    ),
+                    h('div', {style: {textAlign:'right'}},
+                      h('div', {style: {fontSize:'36px', fontWeight:'bold', color:'#1e3a8a'}}, '£5.00')
+                    )
+                  )
+                ),
+                h('button', {onClick: handlePayment, disabled: loading, style: {width:'100%', padding:'18px', background: loading ? '#9ca3af' : 'linear-gradient(to right,#2563eb,#9333ea,#dc2626)', color:'white', border:'none', borderRadius:'12px', fontSize:'20px', fontWeight:'bold', cursor: loading ? 'not-allowed' : 'pointer', marginBottom:'20px'}}, loading ? 'Processing...' : '💳 Pay £5 with Stripe'),
+                h('button', {onClick: () => setStage('contact'), style: {width:'100%', padding:'12px', background:'#f3f4f6', color:'#374151', border:'none', borderRadius:'12px', fontSize:'16px', fontWeight:'bold', cursor:'pointer'}}, 'Back'),
+                h('div', {style: {textAlign:'center', marginTop:'30px', paddingTop:'20px', borderTop:'1px solid #e5e7eb'}},
+                  h('a', {href:'https://horizonbloomconsulting.com', target:'_blank', style: {color:'#6b7280', fontSize:'12px', textDecoration:'none'}}, 
+                    'Powered by ',
+                    h('span', {style: {color:'#2563eb', fontWeight:'600'}}, 'Horizonbloomconsulting.com')
+                  )
+                )
+              )
+            );
+          }
+          
+          if (stage === 'assessment') {
+            const q = questions[currentQ];
+            const sel = selected[q.id];
+            const ans = sel !== undefined;
+            return h('div', {style: {minHeight:'100vh', background:'linear-gradient(135deg,#1e3a8a,#991b1b)', padding:'40px 20px'}},
+              h('div', {style: {maxWidth:'800px', margin:'0 auto', background:'white', borderRadius:'20px', padding:'40px'}},
+                h('div', {style: {marginBottom:'20px'}},
+                  h('h1', {style: {fontSize:'28px', fontWeight:'bold', marginBottom:'5px'}}, '🇬🇧 UK Global Talent Visa'),
+                  h('p', {style: {color:'#6b7280', fontSize:'14px'}}, 'Question ' + (currentQ+1) + ' of 15')
+                ),
+                h('h2', {style: {fontSize:'24px', fontWeight:'bold', marginBottom:'30px'}}, q.question),
+                h('div', {style: {marginBottom:'30px'}},
+                  ...q.options.map((opt, idx) => {
+                    const isSel = sel === idx;
+                    const isDis = sel !== undefined && sel !== idx;
+                    return h('button', {
+                      key: idx,
+                      onClick: () => !isDis && handleAnswer(q.id, opt.points, idx),
+                      disabled: isDis,
+                      style: {width:'100%', textAlign:'left', padding:'16px', marginBottom:'12px', border: isSel ? '2px solid #2563eb' : '2px solid #e5e7eb', borderRadius:'12px', background: isSel ? 'linear-gradient(to right,#dbeafe,#fecaca)' : isDis ? '#f9fafb' : 'white', cursor: isDis ? 'not-allowed' : 'pointer', opacity: isDis ? 0.5 : 1}
+                    },
+                      h('span', {style: {fontSize:'24px', marginRight:'12px', color: isSel ? '#2563eb' : '#d1d5db'}}, isSel ? '✓' : '○'),
+                      opt.text
+                    );
+                  })
+                ),
+                h('div', {style: {display:'flex', gap:'12px'}},
+                  currentQ > 0 && h('button', {onClick: () => setCurrentQ(currentQ-1), style: {flex:1, padding:'14px', background:'#f3f4f6', color:'#374151', border:'none', borderRadius:'12px', fontSize:'16px', fontWeight:'bold', cursor:'pointer'}}, '← Previous'),
+                  h('button', {onClick: next, disabled: !ans, style: {flex:1, padding:'14px', background: ans ? 'linear-gradient(to right,#2563eb,#9333ea,#dc2626)' : '#e5e7eb', color: ans ? 'white' : '#9ca3af', border:'none', borderRadius:'12px', fontSize:'16px', fontWeight:'bold', cursor: ans ? 'pointer' : 'not-allowed'}}, currentQ === 14 ? 'See Results' : 'Continue →')
+                ),
+                h('div', {style: {textAlign:'center', marginTop:'30px', paddingTop:'20px', borderTop:'1px solid #e5e7eb'}},
+                  h('a', {href:'https://horizonbloomconsulting.com', target:'_blank', style: {color:'#6b7280', fontSize:'12px', textDecoration:'none'}}, 
+                    'Powered by ',
+                    h('span', {style: {color:'#2563eb', fontWeight:'600'}}, 'Horizonbloomconsulting.com')
+                  )
+                )
+              )
+            );
+          }
+          
+          if (stage === 'results') {
+            const pct = calcScore();
+            return h('div', {style: {minHeight:'100vh', background:'linear-gradient(135deg,#1e3a8a,#991b1b)', padding:'40px 20px'}},
+              h('div', {style: {maxWidth:'900px', margin:'0 auto', background:'white', borderRadius:'20px', padding:'60px 40px'}},
+                h('div', {style: {textAlign:'center', marginBottom:'40px'}},
+                  h('div', {style: {fontSize:'80px', marginBottom:'20px'}}, pct >= 75 ? '🏆' : pct >= 60 ? '⭐' : pct >= 45 ? '💡' : pct >= 30 ? '📚' : '🎯'),
+                  h('h1', {style: {fontSize:'42px', fontWeight:'bold', marginBottom:'10px'}}, name + ', Here Are Your Results!'),
+                  h('p', {style: {color:'#6b7280', fontSize:'18px'}}, 'Global Talent Visa Eligibility Assessment')
+                ),
+                h('div', {style: {textAlign:'center', marginBottom:'40px'}},
+                  h('div', {style: {fontSize:'72px', fontWeight:'bold', color: pct >= 75 ? '#047857' : pct >= 60 ? '#1d4ed8' : pct >= 45 ? '#b45309' : pct >= 30 ? '#c2410c' : '#b91c1c', marginBottom:'10px'}}, pct + '%'),
+                  h('div', {style: {fontSize:'20px', color:'#6b7280', marginBottom:'5px'}}, 'Assessment Score'),
+                  h('div', {style: {fontSize:'28px', fontWeight:'bold', color: pct >= 75 ? '#047857' : pct >= 60 ? '#1d4ed8' : pct >= 45 ? '#b45309' : pct >= 30 ? '#c2410c' : '#b91c1c'}}, pct >= 75 ? 'Excellent Chances' : pct >= 60 ? 'Good Chances' : pct >= 45 ? 'Moderate Chances' : pct >= 30 ? 'Lower Chances' : 'Limited Chances')
+                ),
+                h('div', {style: {textAlign:'center', marginBottom:'40px'}},
+                  h('p', {style: {fontSize:'18px', color:'#374151', marginBottom:'20px'}}, 
+                    pct >= 75 ? 'Strong candidate profile with substantial evidence.' :
+                    pct >= 60 ? 'Solid foundation with good potential.' :
+                    pct >= 45 ? 'You need to build more evidence.' :
+                    pct >= 30 ? 'Significant work needed.' :
+                    'Consider building more experience first.'
+                  ),
+                  h('div', {style: {background:'white', borderRadius:'12px', padding:'30px', boxShadow:'0 1px 3px rgba(0,0,0,0.1)', textAlign:'left'}},
+                    h('h3', {style: {fontSize:'20px', fontWeight:'bold', marginBottom:'20px'}}, '📋 Next Steps'),
+                    h('div', {style: {marginBottom:'15px'}}, '✓ Book a 1-on-1 consultation at '),
+                    h('a', {href:'https://calendly.com/contact-horizonbloomconsulting/30min?month=2025-11', target:'_blank', style: {color:'#2563eb', fontWeight:'600', textDecoration:'underline'}}, 'Schedule Here')
+                  )
+                ),
+                h('div', {style: {textAlign:'center', marginTop:'30px', paddingTop:'20px', borderTop:'1px solid #e5e7eb'}},
+                  h('a', {href:'https://horizonbloomconsulting.com', target:'_blank', style: {color:'#6b7280', fontSize:'12px', textDecoration:'none'}}, 
+                    'Powered by ',
+                    h('span', {style: {color:'#2563eb', fontWeight:'600'}}, 'Horizonbloomconsulting.com')
+                  )
+                )
+              )
+            );
+          }
+          
+          return null;
+        }
+        
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(h(App));
     </script>
 </body>
 </html>
